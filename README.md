@@ -1,32 +1,43 @@
 # ssh-proxy
 
-Lightweight SOCKS5 proxy over SSH tunnel written in Go.
+Легковесный SOCKS5-прокси через SSH-туннель, написанный на Go.
 
-`ssh-proxy` allows you to quickly create a local SOCKS5 proxy that routes all traffic through a remote SSH server.
-
----
-
-## 🚀 Features
-
-- SOCKS5 proxy over SSH tunnel
-- Password authentication (SSH)
-- Lightweight and fast (single binary)
-- No external dependencies at runtime
-- Works on Linux (Ubuntu recommended)
+`ssh-proxy` позволяет быстро поднять локальный SOCKS5-прокси, который перенаправляет весь трафик через удаленный SSH-сервер.
 
 ---
 
-## 📦 Requirements
+## Возможности
 
-- Linux (Ubuntu 20.04+ recommended)
-- SSH server access
-- Optional: Go (only if building from source)
+- SOCKS5-прокси поверх SSH-туннеля
+- Аутентификация по паролю (SSH)
+- Легковесный и быстрый (один исполняемый файл)
+- Отсутствие внешних зависимостей во время работы
 
 ---
 
-## ⚙️ Installation
+## Настройка удаленного сервера
 
-### One-line install (recommended)
+1. Настройка пользователя на удаленном SSH-сервере (Рекомендуется)
+Для безопасности крайне рекомендуется создать на удаленном сервере отдельного пользователя без доступа к терминалу (шеллу). Такой пользователь сможет использовать SSH-соединение исключительно для проброса трафика и туннелирования, но не сможет выполнять команды в системе.
 
-```bash
+Выполните следующие команды на удаленном SSH-сервере от имени root или пользователя с правами `sudo`:
+
+```sh
+# Создаем системного пользователя без домашней директории и с оболочкой /bin/false
+sudo useradd -M -s /bin/false tunneluser
+
+# Устанавливаем пароль для нового пользователя
+sudo passwd tunneluser
+```
+
+---
+## Установка на клиентской машине
+
+```sh
 bash <(curl -sSL https://raw.githubusercontent.com/larionovmike-collab/ssh-proxy/refs/heads/main/install.sh)
+```
+## Удаление
+
+```sh
+bash <(curl -sSL https://raw.githubusercontent.com/larionovmike-collab/ssh-proxy/refs/heads/main/install.sh) --uninstall
+```
