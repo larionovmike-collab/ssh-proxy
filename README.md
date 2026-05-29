@@ -23,8 +23,8 @@
 Выполните следующие команды на удаленном SSH-сервере от имени root или пользователя с правами `sudo`:
 
 ```sh
-# Создаем системного пользователя без домашней директории и с оболочкой /bin/false
-sudo useradd -M -s /bin/false tunneluser
+# Создаем системного пользователя без домашней директории
+sudo adduser --system --no-create-home --shell /usr/sbin/nologin tunneluser
 
 # Устанавливаем пароль для нового пользователя
 sudo passwd tunneluser
