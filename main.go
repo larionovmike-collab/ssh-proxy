@@ -5,6 +5,9 @@ import (
 	"flag"
 	"log"
 	"net"
+	"sync"
+    "time"
+    "fmt"
 
 	"github.com/armon/go-socks5"
 	"golang.org/x/crypto/ssh"
@@ -12,17 +15,85 @@ import (
 
 // SSHDialer реализует интерфейс Dial для библиотеки SOCKS5
 type SSHDialer struct {
+	mu     sync.RWMutex
 	client *ssh.Client
 }
 
-func (d *SSHDialer) Dial(ctx context.Context, network, addr string) (net.Conn, error) {
-    // Можно использовать dialer с таймаутом из контекста, если нужно
-    select {
-    case <-ctx.Done():
-        return nil, ctx.Err()
-    default:
-        return d.client.Dial(network, addr)
-    }
+func (d *SSHDialer) SetClient(client *ssh.Client) {
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	old := d.client
+	d.client = client
+
+	if old != nil {
+		old.Close()
+	}
+}
+
+func (d *SSHDialer) GetClient() *ssh.Client {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	return d.client
+}
+
+func (d *SSHDialer) Dial(
+	ctx context.Context,
+	network,
+	addr string,
+) (net.Conn, error) {
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+
+	default:
+
+		client := d.GetClient()
+
+		if client == nil {
+			return nil, fmt.Errorf(
+				"ssh disconnected",
+			)
+		}
+
+		return client.Dial(
+			network,
+			addr,
+		)
+	}
+}
+
+func connectSSH(
+	host string,
+	config *ssh.ClientConfig,
+) (*ssh.Client, error) {
+
+	return ssh.Dial(
+		"tcp",
+		host,
+		config,
+	)
+}
+
+func isSSHAlive(
+	client *ssh.Client,
+) bool {
+
+	conn, err := client.Dial(
+		"tcp",
+		"1.1.1.1:80",
+	)
+
+	if err != nil {
+		return false
+	}
+
+	conn.Close()
+
+	return true
 }
 
 func main() {
@@ -52,10 +123,47 @@ func main() {
 		log.Fatalf("Failed to dial SSH: %v", err)
 	}
 	defer sshClient.Close()
+	
+	dialer := &SSHDialer{}
+	dialer.SetClient(sshClient)
+	
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+
+			client := dialer.GetClient()
+
+			if client == nil {
+				continue
+			}
+
+			if isSSHAlive(client) {
+				continue
+			}
+
+			log.Println("SSH disconnected. Reconnecting...")
+
+			for {
+
+				newClient, err := connectSSH(*sshHost, config)
+				if err == nil {
+					dialer.SetClient(newClient)
+
+					log.Println("SSH reconnected")
+
+					break
+				}
+
+				log.Printf("Reconnect failed: %v", err)
+
+				time.Sleep(5 * time.Second)
+			}
+		}
+	}()
 
 	// 3. Настройка SOCKS5 сервера
 	conf := &socks5.Config{
-		Dial: (&SSHDialer{client: sshClient}).Dial,
+		Dial: dialer.Dial,
 	}
 	server, err := socks5.New(conf)
 	if err != nil {
