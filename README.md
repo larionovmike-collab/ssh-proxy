@@ -24,10 +24,10 @@
 
 ```sh
 # Создаем системного пользователя без домашней директории
-sudo adduser --system --no-create-home --shell /usr/sbin/nologin tunneluser
+sudo adduser --system --no-create-home --shell /usr/sbin/nologin tunnel_user
 
 # Устанавливаем пароль для нового пользователя
-sudo passwd tunneluser
+sudo passwd tunnel_user
 ```
 
 ---
